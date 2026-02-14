@@ -1,6 +1,9 @@
 const FETCH_TIMEOUT_MS = 2800;
 const TYPEWRITER_MAX_CHARS = 180;
 const PREFERS_REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const ENABLE_KEYWORD_MATCHING = false;
+const BACKGROUND_RECENT_LIMIT = 12;
+const DYNAMIC_IMAGE_CANDIDATES_PER_PROVIDER = 5;
 let typefitCache = null;
 const QUOTE_SOURCE_WEIGHT = {
         Quotable: 22,
@@ -125,6 +128,16 @@ const QUOTE_STOPWORDS = new Set([
         "her", "hers", "its", "do", "does", "did", "have", "has", "had", "will", "would", "can",
         "could", "should", "may", "might", "if", "then", "than", "so", "too", "very", "just"
 ]);
+const CATEGORY_IMAGE_QUERY = {
+        motivation: "mountain,goal,success,climb",
+        wisdom: "nature,calm,light,philosophy",
+        life: "journey,road,landscape,life",
+        love: "sunset,warm,romantic,heart",
+        success: "city,skyline,achievement,focus",
+        inspiration: "sunrise,light,dream,hope",
+        funny: "colorful,joy,happy,vibrant",
+        all: "landscape,nature,cinematic"
+};
 
 const API_CONFIG = {
         workingAPIs: [
@@ -245,7 +258,11 @@ const state = {
         autoThemeInterval: null,
         lastSource: "Local",
         bgRequestId: 0,
-        currentQuoteBgUrl: null
+        currentQuoteBgUrl: null,
+        recentBackgroundUrls: [],
+        failedBackgroundUrls: new Set(),
+        prefetchedBackgrounds: [],
+        prefetchInFlight: false
 };
 
 const elements = {
@@ -387,6 +404,20 @@ function normalizeKeyword(word) {
         return token;
 }
 
+function randomInt(max) {
+        if (max <= 0) return 0;
+        if (window.crypto && window.crypto.getRandomValues) {
+                const arr = new Uint32Array(1);
+                window.crypto.getRandomValues(arr);
+                return arr[0] % max;
+        }
+        return Math.floor(Math.random() * max);
+}
+
+function randomToken() {
+        return `${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
+}
+
 function extractQuoteKeywords(text) {
         const cleaned = String(text || "")
                 .toLowerCase()
@@ -432,16 +463,77 @@ function getImageTopicsForQuote(text) {
 function getCategoryImagePool(category, quoteText = "") {
         const key = String(category || "").toLowerCase();
         const categoryPool = QUOTE_BG_IMAGES_BY_CATEGORY[key] || [];
-        const topicPools = getImageTopicsForQuote(quoteText)
-                .flatMap((topic) => IMAGE_TOPIC_POOLS[topic] || []);
+        const topicPools = ENABLE_KEYWORD_MATCHING
+                ? getImageTopicsForQuote(quoteText).flatMap((topic) => IMAGE_TOPIC_POOLS[topic] || [])
+                : [];
 
-        return Array.from(new Set([...topicPools, ...categoryPool, ...QUOTE_BG_IMAGES]));
+        // Category-first, then global curated set, all deduplicated.
+        return Array.from(new Set([...categoryPool, ...topicPools, ...QUOTE_BG_IMAGES]));
 }
 
-function getRandomQuoteBgUrl(category, quoteText = "") {
-        const pool = getCategoryImagePool(category, quoteText);
-        const index = Math.floor(Math.random() * pool.length);
-        return pool[index];
+function buildImageQuery(category, quoteText = "") {
+        const normalizedCategory = String(category || "all").toLowerCase();
+        const categoryQuery = CATEGORY_IMAGE_QUERY[normalizedCategory] || CATEGORY_IMAGE_QUERY.all;
+
+        if (!ENABLE_KEYWORD_MATCHING) return categoryQuery;
+
+        const keywords = extractQuoteKeywords(quoteText);
+        if (!keywords.length) return categoryQuery;
+
+        const keywordQuery = keywords.slice(0, 3).join(",");
+        return `${keywordQuery},${categoryQuery}`;
+}
+
+function buildDynamicImageCandidates(category, quoteText = "") {
+        const query = encodeURIComponent(buildImageQuery(category, quoteText));
+        const urls = [];
+
+        for (let i = 0; i < DYNAMIC_IMAGE_CANDIDATES_PER_PROVIDER; i += 1) {
+                const seed = randomToken();
+                urls.push(`https://source.unsplash.com/1600x900/?${query}&sig=${seed}`);
+                urls.push(`https://picsum.photos/seed/${seed}/1600/900`);
+                urls.push(`https://picsum.photos/1600/900?random=${seed}`);
+        }
+
+        // Best-quality curated fallback sources (dedup handled later).
+        urls.push(...getCategoryImagePool(category, quoteText));
+        return Array.from(new Set(urls));
+}
+
+function rememberBackgroundUrl(url) {
+        if (!url) return;
+        state.recentBackgroundUrls.push(url);
+        if (state.recentBackgroundUrls.length > BACKGROUND_RECENT_LIMIT) {
+                state.recentBackgroundUrls.shift();
+        }
+}
+
+function takePrefetchedBackground(category) {
+        const normalizedCategory = String(category || "all").toLowerCase();
+        const index = state.prefetchedBackgrounds.findIndex(
+                (item) => item.category === normalizedCategory || item.category === "all"
+        );
+        if (index === -1) return null;
+
+        const [prefetched] = state.prefetchedBackgrounds.splice(index, 1);
+        return prefetched;
+}
+
+function pickUniqueBackgroundUrl(pool) {
+        const fresh = pool.filter(
+                (url) => !state.recentBackgroundUrls.includes(url) && !state.failedBackgroundUrls.has(url)
+        );
+
+        if (fresh.length) {
+                return fresh[randomInt(fresh.length)];
+        }
+
+        const retryPool = pool.filter((url) => !state.failedBackgroundUrls.has(url));
+        if (retryPool.length) {
+                return retryPool[randomInt(retryPool.length)];
+        }
+
+        return pool[randomInt(pool.length)];
 }
 
 function loadImage(url) {
@@ -457,25 +549,55 @@ function loadImage(url) {
 
 async function getRandomBackgroundImage(category, quoteText = "", maxAttempts = 3) {
         const tried = new Set();
-        const pool = getCategoryImagePool(category, quoteText);
+        const pool = buildDynamicImageCandidates(category, quoteText);
         const attempts = Math.min(maxAttempts, Math.max(pool.length, 1));
 
         for (let attempt = 0; attempt < attempts; attempt += 1) {
-                let url = getRandomQuoteBgUrl(category, quoteText);
+                let url = pickUniqueBackgroundUrl(pool);
                 while (tried.has(url) && tried.size < pool.length) {
-                        url = getRandomQuoteBgUrl(category, quoteText);
+                        url = pickUniqueBackgroundUrl(pool);
                 }
                 tried.add(url);
 
                 try {
                         const image = await loadImage(url);
+                        rememberBackgroundUrl(url);
                         return { image, url };
                 } catch (error) {
+                        state.failedBackgroundUrls.add(url);
                         continue;
                 }
         }
 
         return null;
+}
+
+async function prefetchBackgrounds(category, quoteText = "", targetCount = 2) {
+        if (state.prefetchInFlight) return;
+        if (state.prefetchedBackgrounds.length >= targetCount) return;
+
+        state.prefetchInFlight = true;
+        const normalizedCategory = String(category || "all").toLowerCase();
+
+        try {
+                const needed = targetCount - state.prefetchedBackgrounds.length;
+                for (let i = 0; i < needed; i += 1) {
+                        const bgResult = await getRandomBackgroundImage(normalizedCategory, quoteText, 8);
+                        if (!bgResult?.image || !bgResult?.url) continue;
+
+                        const exists = state.prefetchedBackgrounds.some((item) => item.url === bgResult.url);
+                        if (!exists) {
+                                state.prefetchedBackgrounds.push({
+                                        category: normalizedCategory,
+                                        url: bgResult.url,
+                                        image: bgResult.image
+                                });
+                        }
+                }
+        } catch (error) {
+        } finally {
+                state.prefetchInFlight = false;
+        }
 }
 
 async function applyQuoteBackground(category, quoteText = "") {
@@ -484,7 +606,8 @@ async function applyQuoteBackground(category, quoteText = "") {
         const requestId = ++state.bgRequestId;
 
         try {
-                const bgResult = await getRandomBackgroundImage(category, quoteText, 4);
+                const prefetched = takePrefetchedBackground(category);
+                const bgResult = prefetched || await getRandomBackgroundImage(category, quoteText, 8);
                 if (requestId !== state.bgRequestId) return;
 
                 if (bgResult?.url) {
@@ -492,6 +615,7 @@ async function applyQuoteBackground(category, quoteText = "") {
                         elements.quoteSection.style.setProperty("--quote-bg-image", `url("${safeUrl}")`);
                         elements.quoteSection.classList.add("has-photo");
                         state.currentQuoteBgUrl = bgResult.url;
+                        prefetchBackgrounds(category, "", 2);
                         return;
                 }
         } catch (error) {
@@ -550,6 +674,7 @@ async function fetchRandomQuote() {
         state.isTyping = true;
         showLoading();
         setBusyState(true);
+        prefetchBackgrounds(state.currentCategory, "", 2);
 
         try {
                 let quote = null;
@@ -805,7 +930,7 @@ async function renderQuoteCardToCanvas() {
         if (!bgImage) {
                 const categoryForImage = state.currentQuote?.category || state.currentCategory || "all";
                 const quoteText = state.currentQuote?.text || "";
-                const bgResult = await getRandomBackgroundImage(categoryForImage, quoteText, 4);
+                const bgResult = await getRandomBackgroundImage(categoryForImage, quoteText, 8);
                 if (bgResult?.image) {
                         bgImage = bgResult.image;
                 }
@@ -937,6 +1062,7 @@ function setCategory(category) {
         state.currentCategory = category;
         state.usedQuotes.clear();
         updateCategoryBadge(category);
+        state.prefetchedBackgrounds = [];
 
         document.querySelectorAll(".category-btn").forEach((button) => {
                 button.classList.toggle("active", button.dataset.category === category);
@@ -1223,6 +1349,7 @@ function init() {
         createParticles();
         createGeometricShapes();
         warmTypefitCache();
+        prefetchBackgrounds(state.currentCategory, "", 2);
         setupEventListeners();
         restoreState();
         updateCategoryBadge(state.currentCategory);
