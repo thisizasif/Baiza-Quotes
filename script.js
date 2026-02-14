@@ -2,6 +2,15 @@ const FETCH_TIMEOUT_MS = 2800;
 const TYPEWRITER_MAX_CHARS = 180;
 const PREFERS_REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 let typefitCache = null;
+const QUOTE_SOURCE_WEIGHT = {
+        Quotable: 22,
+        ZenQuotes: 20,
+        "Stoic Quotes": 19,
+        QuoteGarden: 17,
+        TypeFit: 16,
+        DummyJSON: 12,
+        Backup: 8
+};
 const QUOTE_BG_IMAGES = [
         "https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=1400&q=80",
         "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1400&q=80",
@@ -51,6 +60,71 @@ const QUOTE_BG_IMAGES_BY_CATEGORY = {
                 "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1400&q=80"
         ]
 };
+const IMAGE_TOPIC_KEYWORDS = {
+        mountain: ["mountain", "climb", "peak", "summit", "rise", "journey", "path"],
+        ocean: ["ocean", "sea", "wave", "calm", "flow", "depth", "water"],
+        forest: ["forest", "tree", "nature", "grow", "growth", "roots", "green"],
+        sunrise: ["sunrise", "morning", "dawn", "hope", "begin", "start", "new"],
+        night: ["night", "dark", "stars", "moon", "silence", "dream"],
+        city: ["city", "street", "hustle", "work", "build", "future", "success"],
+        light: ["light", "shine", "bright", "clarity", "vision", "focus"],
+        road: ["road", "way", "direction", "move", "step", "progress", "travel"],
+        emotion: ["anger", "hurt", "injury", "restrain", "provoke", "pain", "heal", "peace"]
+};
+const IMAGE_TOPIC_POOLS = {
+        mountain: [
+                "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1400&q=80",
+                "https://images.unsplash.com/photo-1454496522488-7a8e488e8606?auto=format&fit=crop&w=1400&q=80",
+                "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=80"
+        ],
+        ocean: [
+                "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1400&q=80",
+                "https://images.unsplash.com/photo-1473116763249-2faaef81ccda?auto=format&fit=crop&w=1400&q=80",
+                "https://images.unsplash.com/photo-1483683804023-6ccdb62f86ef?auto=format&fit=crop&w=1400&q=80"
+        ],
+        forest: [
+                "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1400&q=80",
+                "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1400&q=80",
+                "https://images.unsplash.com/photo-1473448912268-2022ce9509d8?auto=format&fit=crop&w=1400&q=80"
+        ],
+        sunrise: [
+                "https://images.unsplash.com/photo-1490730141103-6cac27aaab94?auto=format&fit=crop&w=1400&q=80",
+                "https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=1400&q=80",
+                "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1400&q=80"
+        ],
+        night: [
+                "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1400&q=80",
+                "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1400&q=80",
+                "https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?auto=format&fit=crop&w=1400&q=80"
+        ],
+        city: [
+                "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?auto=format&fit=crop&w=1400&q=80",
+                "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?auto=format&fit=crop&w=1400&q=80",
+                "https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=1400&q=80"
+        ],
+        light: [
+                "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1400&q=80",
+                "https://images.unsplash.com/photo-1426604966848-d7adac402bff?auto=format&fit=crop&w=1400&q=80",
+                "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1400&q=80"
+        ],
+        road: [
+                "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1400&q=80",
+                "https://images.unsplash.com/photo-1474073705359-5da2a8270c64?auto=format&fit=crop&w=1400&q=80",
+                "https://images.unsplash.com/photo-1501555088652-021faa106b9b?auto=format&fit=crop&w=1400&q=80"
+        ],
+        emotion: [
+                "https://images.unsplash.com/photo-1472417583565-62e7bdeda490?auto=format&fit=crop&w=1400&q=80",
+                "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1400&q=80",
+                "https://images.unsplash.com/photo-1517022812141-23620dba5c23?auto=format&fit=crop&w=1400&q=80"
+        ]
+};
+const QUOTE_STOPWORDS = new Set([
+        "the", "a", "an", "and", "or", "but", "to", "of", "in", "on", "for", "with", "at", "by",
+        "from", "as", "is", "it", "this", "that", "be", "are", "was", "were", "you", "your",
+        "we", "they", "them", "our", "their", "i", "me", "my", "mine", "he", "she", "his",
+        "her", "hers", "its", "do", "does", "did", "have", "has", "had", "will", "would", "can",
+        "could", "should", "may", "might", "if", "then", "than", "so", "too", "very", "just"
+]);
 
 const API_CONFIG = {
         workingAPIs: [
@@ -73,6 +147,41 @@ const API_CONFIG = {
                                         text: data.quote,
                                         author: data.author || "Unknown",
                                         category: "general"
+                                };
+                        }
+                },
+                {
+                        name: "ZenQuotes",
+                        handler: async () => {
+                                const data = await fetchJSONWithTimeout("https://zenquotes.io/api/random");
+                                const item = Array.isArray(data) ? data[0] : data;
+                                return {
+                                        text: item?.q || item?.quote || "Stay positive and keep moving.",
+                                        author: item?.a || item?.author || "Unknown",
+                                        category: "inspiration"
+                                };
+                        }
+                },
+                {
+                        name: "QuoteGarden",
+                        handler: async () => {
+                                const data = await fetchJSONWithTimeout("https://quote-garden.onrender.com/api/v3/quotes/random");
+                                const item = data?.data && data.data[0] ? data.data[0] : null;
+                                return {
+                                        text: item?.quoteText || item?.quote || "Progress is built one step at a time.",
+                                        author: item?.quoteAuthor || item?.author || "Unknown",
+                                        category: "general"
+                                };
+                        }
+                },
+                {
+                        name: "Stoic Quotes",
+                        handler: async () => {
+                                const data = await fetchJSONWithTimeout("https://stoic-quotes.com/api/quote");
+                                return {
+                                        text: data?.text || data?.quote || "The obstacle is the way.",
+                                        author: data?.author || "Stoic",
+                                        category: "wisdom"
                                 };
                         }
                 },
@@ -171,6 +280,63 @@ function normalizeQuote(text, author, category = "general") {
         };
 }
 
+function normalizeCategory(category) {
+        return String(category || "general").toLowerCase();
+}
+
+function scoreQuoteCandidate(quote) {
+        const text = String(quote.text || "").trim();
+        const author = String(quote.author || "").trim();
+        const source = String(quote.source || "");
+        const category = normalizeCategory(quote.category);
+        const words = text.split(/\s+/).filter(Boolean);
+        const wordCount = words.length;
+        const quoteKey = `${text}::${author}`;
+
+        if (!text || wordCount < 4) return -999;
+
+        let score = 0;
+
+        if (wordCount >= 10 && wordCount <= 34) score += 28;
+        else if (wordCount >= 7 && wordCount <= 46) score += 18;
+        else score -= 8;
+
+        if (author && !/^unknown$/i.test(author)) score += 20;
+        else score -= 10;
+
+        if (/https?:\/\//i.test(text)) score -= 30;
+        if (/[<>{}]/.test(text)) score -= 16;
+        if (/^[A-Z0-9\s\W]+$/.test(text)) score -= 10;
+
+        if (/[.!?]$/.test(text)) score += 4;
+        if (/[,;]/.test(text)) score += 2;
+
+        if (state.currentCategory !== "all" && category === normalizeCategory(state.currentCategory)) {
+                score += 14;
+        }
+
+        score += QUOTE_SOURCE_WEIGHT[source] || 10;
+
+        if (state.usedQuotes.has(quoteKey)) score -= 60;
+
+        const recentHistory = state.quoteHistory.slice(-4);
+        if (recentHistory.some((item) => item.text === text && item.author === author)) {
+                score -= 45;
+        }
+
+        return score;
+}
+
+function pickBestQuote(candidates) {
+        if (!Array.isArray(candidates) || !candidates.length) return null;
+
+        const scored = candidates
+                .map((quote) => ({ quote, score: scoreQuoteCandidate(quote) }))
+                .sort((a, b) => b.score - a.score);
+
+        return scored[0]?.quote || null;
+}
+
 async function fetchJSONWithTimeout(url, timeoutMs = FETCH_TIMEOUT_MS) {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -198,15 +364,73 @@ function warmTypefitCache() {
         });
 }
 
-function getCategoryImagePool(category) {
-        const key = String(category || "").toLowerCase();
-        return QUOTE_BG_IMAGES_BY_CATEGORY[key]?.length
-                ? QUOTE_BG_IMAGES_BY_CATEGORY[key]
-                : QUOTE_BG_IMAGES;
+function normalizeKeyword(word) {
+        let token = String(word || "").toLowerCase().replace(/[^a-z]/g, "");
+        if (!token) return "";
+
+        // Light stemming so "provokes" -> "provoke", "restrained" -> "restrain".
+        if (token.length > 6 && token.endsWith("ing")) token = token.slice(0, -3);
+        else if (token.length > 5 && token.endsWith("ed")) token = token.slice(0, -2);
+        else if (token.length > 5 && token.endsWith("es")) token = token.slice(0, -2);
+        else if (token.length > 4 && token.endsWith("s")) token = token.slice(0, -1);
+
+        if (token.length < 4) return "";
+        return token;
 }
 
-function getRandomQuoteBgUrl(category) {
-        const pool = getCategoryImagePool(category);
+function extractQuoteKeywords(text) {
+        const cleaned = String(text || "")
+                .toLowerCase()
+                .replace(/[^a-z\s]/g, " ");
+        const words = cleaned.split(/\s+/).filter(Boolean);
+        const unique = [];
+        const seen = new Set();
+
+        for (const word of words) {
+                if (QUOTE_STOPWORDS.has(word)) continue;
+                if (word.endsWith("ly")) continue; // skip many adverbs like "frequently"
+
+                const token = normalizeKeyword(word);
+                if (!token || QUOTE_STOPWORDS.has(token) || seen.has(token)) continue;
+
+                seen.add(token);
+                unique.push(token);
+        }
+
+        return unique.slice(0, 8);
+}
+
+function getImageTopicsForQuote(text) {
+        const keywords = extractQuoteKeywords(text);
+        const topics = new Set();
+
+        for (const [topic, triggers] of Object.entries(IMAGE_TOPIC_KEYWORDS)) {
+                if (triggers.some((trigger) => {
+                        const normalizedTrigger = normalizeKeyword(trigger);
+                        return keywords.some((key) =>
+                                key === normalizedTrigger ||
+                                key.startsWith(normalizedTrigger) ||
+                                normalizedTrigger.startsWith(key)
+                        );
+                })) {
+                        topics.add(topic);
+                }
+        }
+
+        return Array.from(topics);
+}
+
+function getCategoryImagePool(category, quoteText = "") {
+        const key = String(category || "").toLowerCase();
+        const categoryPool = QUOTE_BG_IMAGES_BY_CATEGORY[key] || [];
+        const topicPools = getImageTopicsForQuote(quoteText)
+                .flatMap((topic) => IMAGE_TOPIC_POOLS[topic] || []);
+
+        return Array.from(new Set([...topicPools, ...categoryPool, ...QUOTE_BG_IMAGES]));
+}
+
+function getRandomQuoteBgUrl(category, quoteText = "") {
+        const pool = getCategoryImagePool(category, quoteText);
         const index = Math.floor(Math.random() * pool.length);
         return pool[index];
 }
@@ -222,15 +446,15 @@ function loadImage(url) {
         });
 }
 
-async function getRandomBackgroundImage(category, maxAttempts = 3) {
+async function getRandomBackgroundImage(category, quoteText = "", maxAttempts = 3) {
         const tried = new Set();
-        const pool = getCategoryImagePool(category);
+        const pool = getCategoryImagePool(category, quoteText);
         const attempts = Math.min(maxAttempts, Math.max(pool.length, 1));
 
         for (let attempt = 0; attempt < attempts; attempt += 1) {
-                let url = getRandomQuoteBgUrl(category);
+                let url = getRandomQuoteBgUrl(category, quoteText);
                 while (tried.has(url) && tried.size < pool.length) {
-                        url = getRandomQuoteBgUrl(category);
+                        url = getRandomQuoteBgUrl(category, quoteText);
                 }
                 tried.add(url);
 
@@ -245,13 +469,13 @@ async function getRandomBackgroundImage(category, maxAttempts = 3) {
         return null;
 }
 
-async function applyQuoteBackground(category) {
+async function applyQuoteBackground(category, quoteText = "") {
         if (!elements.quoteSection) return;
 
         const requestId = ++state.bgRequestId;
 
         try {
-                const bgResult = await getRandomBackgroundImage(category, 3);
+                const bgResult = await getRandomBackgroundImage(category, quoteText, 4);
                 if (requestId !== state.bgRequestId) return;
 
                 if (bgResult?.url) {
@@ -344,7 +568,7 @@ async function fetchRandomQuote() {
 
                 state.usedQuotes.add(`${quote.text}::${quote.author}`);
                 addToHistory(quote);
-                applyQuoteBackground(quote.category);
+                applyQuoteBackground(quote.category, quote.text);
 
                 await typeQuote(quote.text, quote.author, quote.category);
 
@@ -400,27 +624,17 @@ async function tryWorkingAPIs() {
         async function runAPI(api) {
                 const result = await api.handler();
                 if (!result || !result.text) throw new Error(`${api.name}-empty`);
-                result.source = api.name;
-                return result;
+                const quote = normalizeQuote(result.text, result.author, result.category || "general");
+                quote.source = api.name;
+                return quote;
         }
 
-        const fastAPIs = API_CONFIG.workingAPIs.filter((api) => api.name !== "TypeFit");
-        if (fastAPIs.length) {
-                try {
-                        return await Promise.any(fastAPIs.map((api) => runAPI(api)));
-                } catch (error) {
-                }
-        }
+        const results = await Promise.allSettled(API_CONFIG.workingAPIs.map((api) => runAPI(api)));
+        const candidates = results
+                .filter((result) => result.status === "fulfilled")
+                .map((result) => result.value);
 
-        const fallbackAPI = API_CONFIG.workingAPIs.find((api) => api.name === "TypeFit");
-        if (fallbackAPI) {
-                try {
-                        return await runAPI(fallbackAPI);
-                } catch (error) {
-                }
-        }
-
-        return null;
+        return pickBestQuote(candidates);
 }
 
 function getBackupQuote() {
@@ -448,7 +662,7 @@ function getBackupQuote() {
 
 async function typeQuote(text, author, category = "all") {
         if (PREFERS_REDUCED_MOTION || text.length > TYPEWRITER_MAX_CHARS) {
-                elements.quoteText.textContent = `"${text}"`;
+                elements.quoteText.textContent = text;
                 elements.quoteAuthor.textContent = author;
                 state.currentQuote = { text, author, category };
                 updateQuoteMeta(text, category);
@@ -458,7 +672,7 @@ async function typeQuote(text, author, category = "all") {
         elements.quoteText.textContent = "";
         elements.quoteAuthor.textContent = "";
 
-        const content = `"${text}"`;
+        const content = text;
         const typingSpeed = window.innerWidth < 768 ? 5 : 4;
         const step = content.length > 130 ? 3 : content.length > 90 ? 2 : 1;
 
@@ -483,11 +697,11 @@ async function typeQuote(text, author, category = "all") {
 }
 
 function displayQuote(text, author, category = "all", notify = true) {
-        elements.quoteText.textContent = `"${text}"`;
+        elements.quoteText.textContent = text;
         elements.quoteAuthor.textContent = author;
         state.currentQuote = { text, author, category };
         updateQuoteMeta(text, category);
-        applyQuoteBackground(category);
+        applyQuoteBackground(category, text);
 
         if (notify) {
                 showToast("Quote restored", "info");
@@ -526,7 +740,7 @@ function updateHistoryDisplay() {
 
                 const preview = document.createElement("div");
                 preview.className = "history-text";
-                preview.textContent = `"${quote.text.slice(0, 70)}${quote.text.length > 70 ? "..." : ""}"`;
+                preview.textContent = `${quote.text.slice(0, 70)}${quote.text.length > 70 ? "..." : ""}`;
 
                 const author = document.createElement("div");
                 author.className = "history-author";
@@ -547,7 +761,7 @@ async function copyQuote() {
                 return;
         }
 
-        const text = `"${state.currentQuote.text}" -- ${state.currentQuote.author}`;
+        const text = `${state.currentQuote.text} -- ${state.currentQuote.author}`;
 
         try {
                 await navigator.clipboard.writeText(text);
@@ -563,29 +777,109 @@ async function copyQuote() {
         }
 }
 
+async function renderQuoteCardToCanvas() {
+        const canvas = elements.quoteCanvas;
+        const ctx = canvas.getContext("2d");
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        let bgImage = null;
+
+        if (state.currentQuoteBgUrl) {
+                try {
+                        bgImage = await loadImage(state.currentQuoteBgUrl);
+                } catch (error) {
+                        bgImage = null;
+                }
+        }
+
+        if (!bgImage) {
+                const categoryForImage = state.currentQuote?.category || state.currentCategory || "all";
+                const quoteText = state.currentQuote?.text || "";
+                const bgResult = await getRandomBackgroundImage(categoryForImage, quoteText, 4);
+                if (bgResult?.image) {
+                        bgImage = bgResult.image;
+                }
+        }
+
+        if (bgImage) {
+                drawCoverImage(ctx, bgImage, canvas.width, canvas.height);
+        } else {
+                const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                gradient.addColorStop(0, "#0c2233");
+                gradient.addColorStop(0.5, "#175676");
+                gradient.addColorStop(1, "#2ec4b6");
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.shadowColor = "rgba(0, 0, 0, .72)";
+        ctx.shadowBlur = 18;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 2;
+
+        const fullQuote = state.currentQuote.text;
+        const maxLineWidth = canvas.width - 220;
+        let fontSize = 62;
+        let lines = [];
+        let lineHeight = 72;
+
+        while (fontSize >= 36) {
+                ctx.font = `700 ${fontSize}px "Cormorant Garamond", Georgia, serif`;
+                lines = wrapTextLines(ctx, fullQuote, maxLineWidth);
+                lineHeight = Math.round(fontSize * 1.18);
+
+                if (lines.length <= 6) {
+                        break;
+                }
+
+                fontSize -= 4;
+        }
+
+        const blockHeight = lines.length * lineHeight;
+        const startY = canvas.height / 2 - blockHeight / 2 - 20;
+
+        lines.forEach((currentLine, index) => {
+                ctx.fillText(currentLine, canvas.width / 2, startY + index * lineHeight);
+        });
+
+        ctx.font = '600 34px "Space Grotesk", "Segoe UI", sans-serif';
+        ctx.fillStyle = "#f3fbff";
+        ctx.fillText(`-- ${state.currentQuote.author}`, canvas.width / 2, startY + blockHeight + 46);
+        ctx.shadowBlur = 0;
+
+        return canvas;
+}
+
 async function shareQuote() {
         if (!state.currentQuote) {
                 showToast("Generate a quote first", "error");
                 return;
         }
 
-        const payload = {
-                title: "Baiza Quote",
-                text: `"${state.currentQuote.text}" -- ${state.currentQuote.author}`,
-                url: window.location.href
-        };
+        const textPayload = `${state.currentQuote.text} -- ${state.currentQuote.author}\n${window.location.href}`;
 
         try {
                 if (navigator.share) {
-                        await navigator.share(payload);
+                        // Use text-only payload for widest native share-sheet compatibility.
+                        await navigator.share({ text: textPayload });
+                        showToast("Shared quote text + link", "success");
                 } else {
-                        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(payload.text)}`;
+                        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(textPayload)}`;
                         window.open(url, "_blank");
                         showToast("Opened share tab", "info");
                 }
         } catch (error) {
                 if (error.name !== "AbortError") {
-                        showToast("Share canceled", "error");
+                        try {
+                                await navigator.clipboard.writeText(textPayload);
+                                showToast("Share not available. Copied quote + link instead.", "info");
+                        } catch (clipboardError) {
+                                showToast("Share canceled", "error");
+                        }
                 }
         }
 }
@@ -601,77 +895,7 @@ async function downloadQuoteAsImage() {
         elements.downloadBtn.disabled = true;
 
         try {
-                const canvas = elements.quoteCanvas;
-                const ctx = canvas.getContext("2d");
-
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                let bgImage = null;
-
-                if (state.currentQuoteBgUrl) {
-                        try {
-                                bgImage = await loadImage(state.currentQuoteBgUrl);
-                        } catch (error) {
-                                bgImage = null;
-                        }
-                }
-
-                if (!bgImage) {
-                        const categoryForImage = state.currentQuote?.category || state.currentCategory || "all";
-                        const bgResult = await getRandomBackgroundImage(categoryForImage, 4);
-                        if (bgResult?.image) {
-                                bgImage = bgResult.image;
-                        }
-                }
-
-                if (bgImage) {
-                        drawCoverImage(ctx, bgImage, canvas.width, canvas.height);
-                } else {
-                        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-                        gradient.addColorStop(0, "#0c2233");
-                        gradient.addColorStop(0.5, "#175676");
-                        gradient.addColorStop(1, "#2ec4b6");
-                        ctx.fillStyle = gradient;
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                }
-
-                ctx.fillStyle = "#fff";
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                ctx.shadowColor = "rgba(0, 0, 0, .72)";
-                ctx.shadowBlur = 18;
-                ctx.shadowOffsetX = 0;
-                ctx.shadowOffsetY = 2;
-
-                const fullQuote = `"${state.currentQuote.text}"`;
-                const maxLineWidth = canvas.width - 220;
-                let fontSize = 62;
-                let lines = [];
-                let lineHeight = 72;
-
-                while (fontSize >= 36) {
-                        ctx.font = `700 ${fontSize}px "Cormorant Garamond", Georgia, serif`;
-                        lines = wrapTextLines(ctx, fullQuote, maxLineWidth);
-                        lineHeight = Math.round(fontSize * 1.18);
-
-                        if (lines.length <= 6) {
-                                break;
-                        }
-
-                        fontSize -= 4;
-                }
-
-                const blockHeight = lines.length * lineHeight;
-                const startY = canvas.height / 2 - blockHeight / 2 - 20;
-
-                lines.forEach((currentLine, index) => {
-                        ctx.fillText(currentLine, canvas.width / 2, startY + index * lineHeight);
-                });
-
-                ctx.font = '600 34px "Space Grotesk", "Segoe UI", sans-serif';
-                ctx.fillStyle = "#f3fbff";
-                ctx.fillText(`-- ${state.currentQuote.author}`, canvas.width / 2, startY + blockHeight + 46);
-                ctx.shadowBlur = 0;
+                const canvas = await renderQuoteCardToCanvas();
 
                 const link = document.createElement("a");
                 link.download = `baiza-quote-${Date.now()}.png`;
