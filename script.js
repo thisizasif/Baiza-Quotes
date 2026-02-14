@@ -1,5 +1,9 @@
 const FETCH_TIMEOUT_MS = 2800;
 const TYPEWRITER_MAX_CHARS = 180;
+const EXPORT_BASE_WIDTH = 1200;
+const EXPORT_BASE_HEIGHT = 630;
+const EXPORT_8K_WIDTH = 7680;
+const EXPORT_8K_HEIGHT = Math.round((EXPORT_8K_WIDTH * EXPORT_BASE_HEIGHT) / EXPORT_BASE_WIDTH);
 const PREFERS_REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const ENABLE_KEYWORD_MATCHING = false;
 const BACKGROUND_RECENT_LIMIT = 12;
@@ -138,8 +142,35 @@ const CATEGORY_IMAGE_QUERY = {
         success: "city,skyline,achievement,focus",
         inspiration: "sunrise,light,dream,hope",
         funny: "colorful,joy,happy,vibrant",
+        urdu: "pakistan,poetry,night,calm",
         all: "landscape,nature,cinematic"
 };
+const URDU_QUOTES = [
+        { text: "\u062c\u0648 \u062f\u0644 \u0633\u06d2 \u0646\u06a9\u0644\u062a\u06cc \u06c1\u06d2 \u0627\u062b\u0631 \u0631\u06a9\u06be\u062a\u06cc \u06c1\u06d2\u06d4", author: "Allama Iqbal", category: "urdu" },
+        { text: "\u0628\u0648\u0644 \u06a9\u06c1 \u0644\u0628 \u0622\u0632\u0627\u062f \u06c1\u06cc\u06ba \u062a\u06cc\u0631\u06d2\u06d4", author: "Faiz Ahmed Faiz", category: "urdu" },
+        { text: "\u06c1\u0632\u0627\u0631\u0648\u06ba \u062e\u0648\u0627\u06c1\u0634\u06cc\u06ba \u0627\u06cc\u0633\u06cc \u06a9\u06c1 \u06c1\u0631 \u062e\u0648\u0627\u06c1\u0634 \u067e\u06c1 \u062f\u0645 \u0646\u06a9\u0644\u06d2\u06d4", author: "Mirza Ghalib", category: "urdu" },
+        { text: "\u0631\u0646\u062c\u0634 \u06c1\u06cc \u0633\u06c1\u06cc \u062f\u0644 \u06c1\u06cc \u062f\u06a9\u06be\u0627\u0646\u06d2 \u06a9\u06d2 \u0644\u06cc\u06d2 \u0622\u06d4", author: "Ahmed Faraz", category: "urdu" },
+        { text: "\u062f\u0644 \u0646\u0627 \u0627\u0645\u06cc\u062f \u062a\u0648 \u0646\u06c1\u06cc\u06ba \u0646\u0627\u06a9\u0627\u0645 \u06c1\u06cc \u062a\u0648 \u06c1\u06d2\u06d4", author: "Faiz Ahmed Faiz", category: "urdu" },
+        { text: "\u0627\u0628 \u06a9\u06d2 \u06c1\u0645 \u0628\u0686\u06be\u0691\u06d2 \u062a\u0648 \u0634\u0627\u06cc\u062f \u06a9\u0628\u06be\u06cc \u062e\u0648\u0627\u0628\u0648\u06ba \u0645\u06cc\u06ba \u0645\u0644\u06cc\u06ba\u06d4", author: "Ahmed Faraz", category: "urdu" },
+        { text: "\u0645\u06cc\u06ba \u0628\u06be\u06cc \u0628\u06c1\u062a \u0639\u062c\u06cc\u0628 \u06c1\u0648\u06ba \u0627\u062a\u0646\u0627 \u0639\u062c\u06cc\u0628 \u06c1\u0648\u06ba \u06a9\u06c1 \u0628\u0633\u06d4", author: "Jaun Elia", category: "urdu" },
+        { text: "\u06a9\u0648\u0626\u06cc \u0627\u0645\u06cc\u062f \u0628\u0631 \u0646\u06c1\u06cc\u06ba \u0622\u062a\u06cc \u06a9\u0648\u0626\u06cc \u0635\u0648\u0631\u062a \u0646\u0638\u0631 \u0646\u06c1\u06cc\u06ba \u0622\u062a\u06cc\u06d4", author: "Mirza Ghalib", category: "urdu" },
+        { text: "\u0686\u0644\u06d2 \u0628\u06be\u06cc \u0622\u0624 \u06a9\u06c1 \u06af\u0644\u0634\u0646 \u06a9\u0627 \u06a9\u0627\u0631\u0648\u0628\u0627\u0631 \u0686\u0644\u06d2\u06d4", author: "Faiz Ahmed Faiz", category: "urdu" },
+        { text: "\u0627\u0628 \u062a\u0648 \u06af\u06be\u0628\u0631\u0627 \u06a9\u06d2 \u06cc\u06c1 \u06a9\u06c1\u062a\u06d2 \u06c1\u06cc\u06ba \u06a9\u06c1 \u0645\u0631 \u062c\u0627\u0626\u06cc\u06ba \u06af\u06d2\u06d4", author: "Zauq", category: "urdu" }
+];
+const IMAGE_API_TIMEOUT_MS = 1800;
+const IMAGE_PROVIDER_KEYS = {
+        unsplash: "BAIZA_UNSPLASH_KEY",
+        pexels: "BAIZA_PEXELS_KEY",
+        pixabay: "BAIZA_PIXABAY_KEY"
+};
+// Set keys in global scope or localStorage, for example:
+// window.BAIZA_UNSPLASH_KEY = "your_key";
+// localStorage.setItem("BAIZA_PEXELS_KEY", "your_key");
+// localStorage.setItem("BAIZA_PIXABAY_KEY", "your_key");
+const PINTEREST_IMAGE_POOL = [
+        // Optional Pinterest CDN image URLs:
+        // "https://i.pinimg.com/originals/xx/yy/zz/example.jpg"
+];
 
 const API_CONFIG = {
         workingAPIs: [
@@ -247,6 +278,7 @@ const API_CONFIG = {
                 { text: "The journey of a thousand miles begins with one step.", author: "Lao Tzu", category: "wisdom" }
         ]
 };
+const URDU_API_PROVIDERS = [];
 
 const state = {
         currentTheme: "default",
@@ -261,6 +293,9 @@ const state = {
         lastSource: "Local",
         bgRequestId: 0,
         currentQuoteBgUrl: null,
+        currentQuoteBgImage: null,
+        bgApplyPromise: null,
+        urduUsedQuotes: new Set(),
         recentBackgroundUrls: [],
         failedBackgroundUrls: new Set(),
         prefetchedBackgrounds: [],
@@ -316,6 +351,18 @@ function normalizeCategory(category) {
         return String(category || "general").toLowerCase();
 }
 
+function isUrduText(text) {
+        return /[\u0600-\u06FF]/.test(String(text || ""));
+}
+
+function hasRealAuthorName(author) {
+        const value = String(author || "").trim();
+        if (!value) return false;
+        if (/^(unknown|anonymous|n\/a|none)$/i.test(value)) return false;
+        if (/^(urdu proverb|urdu saying)$/i.test(value)) return false;
+        return true;
+}
+
 function scoreQuoteCandidate(quote) {
         const text = String(quote.text || "").trim();
         const author = String(quote.author || "").trim();
@@ -326,6 +373,9 @@ function scoreQuoteCandidate(quote) {
         const quoteKey = `${text}::${author}`;
 
         if (!text || wordCount < 4) return -999;
+        if (!hasRealAuthorName(author)) return -999;
+        if (state.currentCategory === "urdu" && !isUrduText(text)) return -999;
+        if (state.currentCategory !== "urdu" && isUrduText(text)) return -999;
 
         let score = 0;
 
@@ -379,12 +429,12 @@ function pickBestQuote(candidates) {
         return scored[0]?.quote || null;
 }
 
-async function fetchJSONWithTimeout(url, timeoutMs = FETCH_TIMEOUT_MS) {
+async function fetchJSONWithTimeout(url, timeoutMs = FETCH_TIMEOUT_MS, options = {}) {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeoutMs);
 
         try {
-                const response = await fetch(url, { signal: controller.signal });
+                const response = await fetch(url, { ...options, signal: controller.signal });
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 return await response.json();
         } finally {
@@ -404,6 +454,20 @@ function warmTypefitCache() {
         getTypefitQuotes().catch(() => {
                 typefitCache = [];
         });
+}
+
+async function ensureCanvasFontsReady() {
+        if (!document.fonts || !document.fonts.load) return;
+
+        try {
+                await Promise.all([
+                        document.fonts.load('700 64px "Cormorant Garamond"'),
+                        document.fonts.load('600 34px "Space Grotesk"'),
+                        document.fonts.load('italic 700 28px "Cormorant Garamond"'),
+                        document.fonts.ready
+                ]);
+        } catch (error) {
+        }
 }
 
 function normalizeKeyword(word) {
@@ -500,8 +564,91 @@ function buildImageQuery(category, quoteText = "") {
         return `${keywordQuery},${categoryQuery}`;
 }
 
-function buildDynamicImageCandidates(category, quoteText = "") {
+function readImageProviderKey(providerName) {
+        const keyName = IMAGE_PROVIDER_KEYS[providerName];
+        if (!keyName) return "";
+
+        try {
+                const fromWindow = typeof window !== "undefined" ? window[keyName] : "";
+                const fromStorage = typeof localStorage !== "undefined" ? localStorage.getItem(keyName) : "";
+                return String(fromWindow || fromStorage || "").trim();
+        } catch (error) {
+                return "";
+        }
+}
+
+function normalizeQueryForSearch(query) {
+        return String(query || "")
+                .toLowerCase()
+                .replace(/,/g, " ")
+                .replace(/\s+/g, " ")
+                .trim() || "landscape nature";
+}
+
+async function fetchUnsplashApiCandidates(query) {
+        const key = readImageProviderKey("unsplash");
+        if (!key) return [];
+
+        const endpoint = `https://api.unsplash.com/photos/random?count=8&orientation=landscape&query=${encodeURIComponent(query)}`;
+        const data = await fetchJSONWithTimeout(endpoint, IMAGE_API_TIMEOUT_MS, {
+                headers: {
+                        Authorization: `Client-ID ${key}`
+                }
+        });
+
+        const items = Array.isArray(data) ? data : [data];
+        return items
+                .map((item) => item?.urls?.regular || item?.urls?.full || item?.urls?.raw || "")
+                .filter(Boolean)
+                .slice(0, DYNAMIC_IMAGE_CANDIDATES_PER_PROVIDER);
+}
+
+async function fetchPexelsApiCandidates(query) {
+        const key = readImageProviderKey("pexels");
+        if (!key) return [];
+
+        const page = randomInt(20) + 1;
+        const endpoint = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&orientation=landscape&per_page=10&page=${page}`;
+        const data = await fetchJSONWithTimeout(endpoint, IMAGE_API_TIMEOUT_MS, {
+                headers: {
+                        Authorization: key
+                }
+        });
+
+        return (Array.isArray(data?.photos) ? data.photos : [])
+                .map((item) => item?.src?.landscape || item?.src?.large2x || item?.src?.large || "")
+                .filter(Boolean)
+                .slice(0, DYNAMIC_IMAGE_CANDIDATES_PER_PROVIDER);
+}
+
+async function fetchPixabayApiCandidates(query) {
+        const key = readImageProviderKey("pixabay");
+        if (!key) return [];
+
+        const page = randomInt(30) + 1;
+        const endpoint =
+                `https://pixabay.com/api/?key=${encodeURIComponent(key)}` +
+                `&q=${encodeURIComponent(query)}&image_type=photo&orientation=horizontal&safesearch=true&per_page=20&page=${page}`;
+
+        const data = await fetchJSONWithTimeout(endpoint, IMAGE_API_TIMEOUT_MS);
+        return (Array.isArray(data?.hits) ? data.hits : [])
+                .map((item) => item?.largeImageURL || item?.webformatURL || "")
+                .filter(Boolean)
+                .slice(0, DYNAMIC_IMAGE_CANDIDATES_PER_PROVIDER);
+}
+
+function buildPinterestCandidates() {
+        if (!PINTEREST_IMAGE_POOL.length) return [];
+        const token = randomToken();
+        return PINTEREST_IMAGE_POOL
+                .filter(Boolean)
+                .map((url) => `${url}${url.includes("?") ? "&" : "?"}cb=${token}`)
+                .slice(0, DYNAMIC_IMAGE_CANDIDATES_PER_PROVIDER);
+}
+
+async function buildDynamicImageCandidates(category, quoteText = "") {
         const query = encodeURIComponent(buildImageQuery(category, quoteText));
+        const searchQuery = normalizeQueryForSearch(buildImageQuery(category, quoteText));
         const urls = [];
 
         for (let i = 0; i < DYNAMIC_IMAGE_CANDIDATES_PER_PROVIDER; i += 1) {
@@ -510,6 +657,19 @@ function buildDynamicImageCandidates(category, quoteText = "") {
                 urls.push(`https://picsum.photos/seed/${seed}/1600/900`);
                 urls.push(`https://picsum.photos/1600/900?random=${seed}`);
         }
+
+        const providerResults = await Promise.allSettled([
+                fetchUnsplashApiCandidates(searchQuery),
+                fetchPexelsApiCandidates(searchQuery),
+                fetchPixabayApiCandidates(searchQuery)
+        ]);
+
+        for (const result of providerResults) {
+                if (result.status !== "fulfilled" || !Array.isArray(result.value)) continue;
+                urls.push(...result.value);
+        }
+
+        urls.push(...buildPinterestCandidates());
 
         // Best-quality curated fallback sources (dedup handled later).
         urls.push(...getCategoryImagePool(category, quoteText));
@@ -565,7 +725,7 @@ function loadImage(url) {
 
 async function getRandomBackgroundImage(category, quoteText = "", maxAttempts = 3) {
         const tried = new Set();
-        const pool = buildDynamicImageCandidates(category, quoteText);
+        const pool = await buildDynamicImageCandidates(category, quoteText);
         const attempts = Math.min(maxAttempts, Math.max(pool.length, 1));
 
         for (let attempt = 0; attempt < attempts; attempt += 1) {
@@ -577,8 +737,9 @@ async function getRandomBackgroundImage(category, quoteText = "", maxAttempts = 
 
                 try {
                         const image = await loadImage(url);
-                        rememberBackgroundUrl(url);
-                        return { image, url };
+                        const resolvedUrl = image.currentSrc || image.src || url;
+                        rememberBackgroundUrl(resolvedUrl);
+                        return { image, url: resolvedUrl, requestedUrl: url };
                 } catch (error) {
                         state.failedBackgroundUrls.add(url);
                         continue;
@@ -631,6 +792,7 @@ async function applyQuoteBackground(category, quoteText = "") {
                         elements.quoteSection.style.setProperty("--quote-bg-image", `url("${safeUrl}")`);
                         elements.quoteSection.classList.add("has-photo");
                         state.currentQuoteBgUrl = bgResult.url;
+                        state.currentQuoteBgImage = bgResult.image || null;
                         prefetchBackgrounds(category, "", 2);
                         return;
                 }
@@ -641,6 +803,7 @@ async function applyQuoteBackground(category, quoteText = "") {
                 elements.quoteSection.classList.remove("has-photo");
                 elements.quoteSection.style.removeProperty("--quote-bg-image");
                 state.currentQuoteBgUrl = null;
+                state.currentQuoteBgImage = null;
         }
 }
 
@@ -695,30 +858,39 @@ async function fetchRandomQuote() {
         try {
                 let quote = null;
 
-                if (state.currentCategory !== "all") {
+                if (state.currentCategory === "urdu") {
+                        quote = await tryUrduAPIs();
+                        if (!quote) {
+                                quote = getUrduQuote();
+                        }
+                } else if (state.currentCategory !== "all") {
                         quote = await tryCategoryAPIs();
                 }
-                if (!quote) {
+                if (!quote && state.currentCategory !== "urdu") {
                         quote = await tryWorkingAPIs();
                 }
                 if (!quote) {
                         quote = getBackupQuote();
                 }
 
-                const source = quote.source || state.lastSource || "Local";
+                let source = quote.source || state.lastSource || "Local";
                 quote = normalizeQuote(quote.text, quote.author, quote.category);
+                if (!hasRealAuthorName(quote.author)) {
+                        quote = state.currentCategory === "urdu" ? getUrduQuote() : getBackupQuote();
+                }
+                source = quote.source || source;
                 quote.source = source;
                 state.lastSource = source;
 
                 const quoteKey = `${quote.text}::${quote.author}`;
                 if (state.usedQuotes.has(quoteKey)) {
-                        quote = getBackupQuote();
+                        quote = state.currentCategory === "urdu" ? getUrduQuote() : getBackupQuote();
                         state.lastSource = quote.source || state.lastSource;
                 }
 
                 state.usedQuotes.add(`${quote.text}::${quote.author}`);
                 addToHistory(quote);
-                applyQuoteBackground(quote.category, quote.text);
+                state.bgApplyPromise = applyQuoteBackground(quote.category, quote.text);
 
                 await typeQuote(quote.text, quote.author, quote.category);
 
@@ -727,7 +899,7 @@ async function fetchRandomQuote() {
                 persistState();
                 showToast("New quote loaded", "success");
         } catch (error) {
-                const backup = getBackupQuote();
+                const backup = state.currentCategory === "urdu" ? getUrduQuote() : getBackupQuote();
                 displayQuote(backup.text, backup.author, backup.category, false);
                 showToast("Using backup quotes", "error");
         } finally {
@@ -751,6 +923,8 @@ async function tryCategoryAPIs() {
                                         item.author,
                                         state.currentCategory
                                 );
+                                if (!hasRealAuthorName(quote.author)) continue;
+                                if (state.currentCategory !== "urdu" && isUrduText(quote.text)) continue;
                                 quote.source = "Quotable";
                                 return quote;
                         }
@@ -760,6 +934,8 @@ async function tryCategoryAPIs() {
                                 data.author,
                                 state.currentCategory
                         );
+                        if (!hasRealAuthorName(quote.author)) continue;
+                        if (state.currentCategory !== "urdu" && isUrduText(quote.text)) continue;
                         quote.source = "Quotable";
                         return quote;
                 } catch (error) {
@@ -775,6 +951,12 @@ async function tryWorkingAPIs() {
                 const result = await api.handler();
                 if (!result || !result.text) throw new Error(`${api.name}-empty`);
                 const quote = normalizeQuote(result.text, result.author, result.category || "general");
+                if (!hasRealAuthorName(quote.author)) {
+                        throw new Error(`${api.name}-author-missing`);
+                }
+                if (state.currentCategory !== "urdu" && isUrduText(quote.text)) {
+                        throw new Error(`${api.name}-urdu-filtered`);
+                }
                 quote.source = api.name;
                 return quote;
         }
@@ -807,6 +989,64 @@ function getBackupQuote() {
         return {
                 ...quote,
                 source: "Backup"
+        };
+}
+
+function getUrduQuoteKey(quote) {
+        return `${quote.text}::${quote.author}`;
+}
+
+function persistUrduUsage() {
+        try {
+                localStorage.setItem("baiza_urdu_used", JSON.stringify(Array.from(state.urduUsedQuotes).slice(-300)));
+        } catch (error) {
+        }
+}
+
+async function tryUrduAPIs() {
+        for (const provider of URDU_API_PROVIDERS) {
+                try {
+                        const result = await provider.handler();
+                        const quote = normalizeQuote(result?.text, result?.author, "urdu");
+                        quote.source = provider.name;
+
+                        if (!quote.text || quote.text.length < 12) continue;
+                        if (!isUrduText(quote.text)) continue;
+                        if (!hasRealAuthorName(quote.author)) continue;
+                        if (state.urduUsedQuotes.has(getUrduQuoteKey(quote))) continue;
+
+                        state.urduUsedQuotes.add(getUrduQuoteKey(quote));
+                        persistUrduUsage();
+
+                        return quote;
+                } catch (error) {
+                        continue;
+                }
+        }
+
+        return null;
+}
+
+function getUrduQuote() {
+        const quotePool = URDU_QUOTES;
+        let availableQuotes = quotePool.filter(
+                (quote) => !state.urduUsedQuotes.has(getUrduQuoteKey(quote))
+        );
+
+        if (!availableQuotes.length) {
+                state.urduUsedQuotes.clear();
+                availableQuotes = quotePool.slice();
+        }
+
+        const quote = availableQuotes[randomInt(availableQuotes.length)];
+        state.urduUsedQuotes.add(getUrduQuoteKey(quote));
+        persistUrduUsage();
+
+        return {
+                ...quote,
+                category: "urdu",
+                author: quote.author,
+                source: "Urdu Curated"
         };
 }
 
@@ -851,7 +1091,7 @@ function displayQuote(text, author, category = "all", notify = true) {
         elements.quoteAuthor.textContent = author;
         state.currentQuote = { text, author, category };
         updateQuoteMeta(text, category);
-        applyQuoteBackground(category, text);
+        state.bgApplyPromise = applyQuoteBackground(category, text);
 
         if (notify) {
                 showToast("Quote restored", "info");
@@ -927,57 +1167,59 @@ async function copyQuote() {
         }
 }
 
-async function renderQuoteCardToCanvas() {
-        const canvas = elements.quoteCanvas;
+async function renderQuoteCardToCanvas(options = {}) {
+        const baseWidth = Math.max(1, Number(options.baseWidth) || EXPORT_BASE_WIDTH);
+        const baseHeight = Math.max(1, Number(options.baseHeight) || EXPORT_BASE_HEIGHT);
+        const layoutScale = baseWidth / EXPORT_BASE_WIDTH;
+        const scale = Math.max(1, Number(options.scale) || 1);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(baseWidth * scale);
+        canvas.height = Math.round(baseHeight * scale);
         const ctx = canvas.getContext("2d");
 
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.setTransform(scale, 0, 0, scale, 0, 0);
+        ctx.clearRect(0, 0, baseWidth, baseHeight);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        await ensureCanvasFontsReady();
 
-        let bgImage = null;
+        let bgImage = state.currentQuoteBgImage || null;
 
-        if (state.currentQuoteBgUrl) {
+        if (!bgImage && state.currentQuoteBgUrl) {
                 try {
                         bgImage = await loadImage(state.currentQuoteBgUrl);
+                        state.currentQuoteBgImage = bgImage;
                 } catch (error) {
                         bgImage = null;
                 }
         }
 
-        if (!bgImage) {
-                const categoryForImage = state.currentQuote?.category || state.currentCategory || "all";
-                const quoteText = state.currentQuote?.text || "";
-                const bgResult = await getRandomBackgroundImage(categoryForImage, quoteText, 8);
-                if (bgResult?.image) {
-                        bgImage = bgResult.image;
-                }
-        }
-
         if (bgImage) {
-                drawCoverImage(ctx, bgImage, canvas.width, canvas.height);
+                drawCoverImage(ctx, bgImage, baseWidth, baseHeight);
         } else {
-                const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                const gradient = ctx.createLinearGradient(0, 0, baseWidth, baseHeight);
                 gradient.addColorStop(0, "#0c2233");
                 gradient.addColorStop(0.5, "#175676");
                 gradient.addColorStop(1, "#2ec4b6");
                 ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillRect(0, 0, baseWidth, baseHeight);
         }
 
         ctx.fillStyle = "#fff";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.shadowColor = "rgba(0, 0, 0, .72)";
-        ctx.shadowBlur = 18;
+        ctx.shadowBlur = 18 * layoutScale;
         ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 2;
+        ctx.shadowOffsetY = 2 * layoutScale;
 
         const fullQuote = state.currentQuote.text;
-        const maxLineWidth = canvas.width - 220;
-        let fontSize = 62;
+        const maxLineWidth = baseWidth - (220 * layoutScale);
+        let fontSize = 62 * layoutScale;
         let lines = [];
-        let lineHeight = 72;
+        let lineHeight = 72 * layoutScale;
 
-        while (fontSize >= 36) {
+        while (fontSize >= (36 * layoutScale)) {
                 ctx.font = `700 ${fontSize}px "Cormorant Garamond", Georgia, serif`;
                 lines = wrapTextLines(ctx, fullQuote, maxLineWidth);
                 lineHeight = Math.round(fontSize * 1.18);
@@ -986,24 +1228,27 @@ async function renderQuoteCardToCanvas() {
                         break;
                 }
 
-                fontSize -= 4;
+                fontSize -= (4 * layoutScale);
         }
 
         const blockHeight = lines.length * lineHeight;
-        const startY = canvas.height / 2 - blockHeight / 2 - 20;
+        const startY = baseHeight / 2 - blockHeight / 2 - (20 * layoutScale);
 
         lines.forEach((currentLine, index) => {
-                ctx.fillText(currentLine, canvas.width / 2, startY + index * lineHeight);
+                ctx.fillText(currentLine, baseWidth / 2, startY + index * lineHeight);
         });
 
-        ctx.font = '600 34px "Space Grotesk", "Segoe UI", sans-serif';
+        ctx.font = `600 ${34 * layoutScale}px "Space Grotesk", "Segoe UI", sans-serif`;
         ctx.fillStyle = "#f3fbff";
-        ctx.fillText(`-- ${state.currentQuote.author}`, canvas.width / 2, startY + blockHeight + 46);
-        ctx.font = '600 24px "Cormorant Garamond", Georgia, serif';
-        ctx.fillStyle = "rgba(245, 252, 255, 0.9)";
+        ctx.fillText(`-- ${state.currentQuote.author}`, baseWidth / 2, startY + blockHeight + (46 * layoutScale));
+        ctx.font = `italic 700 ${28 * layoutScale}px "Cormorant Garamond", Georgia, serif`;
+        ctx.fillStyle = "rgba(244, 252, 255, 0.95)";
         ctx.textAlign = "right";
         ctx.textBaseline = "alphabetic";
-        ctx.fillText("thisizasif", canvas.width - 36, canvas.height - 28);
+        ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
+        ctx.shadowBlur = 8 * layoutScale;
+        ctx.shadowOffsetY = 1 * layoutScale;
+        ctx.fillText("thisizasif", baseWidth - 18, baseHeight - (28 * layoutScale));
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.shadowBlur = 0;
@@ -1050,19 +1295,43 @@ async function downloadQuoteAsImage() {
         const originalButtonContent = elements.downloadBtn.innerHTML;
         elements.downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>Rendering';
         elements.downloadBtn.disabled = true;
+        openDownloadPreview("");
+        setDownloadPreviewLoading(true);
 
         try {
-                const canvas = await renderQuoteCardToCanvas();
+                if (state.bgApplyPromise) {
+                        await state.bgApplyPromise.catch(() => { });
+                }
+                let canvas = null;
+                const exportProfiles = [
+                        { baseWidth: EXPORT_8K_WIDTH, baseHeight: EXPORT_8K_HEIGHT, scale: 1 },
+                        { baseWidth: 3840, baseHeight: 2016, scale: 1 },
+                        { baseWidth: 2560, baseHeight: 1344, scale: 1 }
+                ];
+
+                for (const profile of exportProfiles) {
+                        try {
+                                canvas = await renderQuoteCardToCanvas(profile);
+                                break;
+                        } catch (renderError) {
+                                canvas = null;
+                        }
+                }
+
+                if (!canvas) {
+                        throw new Error("all-export-profiles-failed");
+                }
                 const dataUrl = canvas.toDataURL("image/png");
+                openDownloadPreview(dataUrl);
+                setDownloadPreviewLoading(false);
 
                 const link = document.createElement("a");
                 link.download = `baiza-quote-${Date.now()}.png`;
                 link.href = dataUrl;
                 link.click();
-
-                openDownloadPreview(dataUrl);
                 showToast("Image downloaded", "success");
         } catch (error) {
+                setDownloadPreviewLoading(false);
                 showToast("Image creation failed", "error");
         } finally {
                 elements.downloadBtn.innerHTML = originalButtonContent;
@@ -1158,6 +1427,9 @@ function hideLoading() {
 
 function setBusyState(isBusy) {
         elements.generateBtn.disabled = isBusy;
+        elements.copyBtn.disabled = isBusy;
+        elements.shareBtn.disabled = isBusy;
+        elements.downloadBtn.disabled = isBusy;
         document.querySelectorAll(".category-btn").forEach((button) => {
                 button.disabled = isBusy;
         });
@@ -1192,13 +1464,20 @@ function showToast(message, type = "info") {
 
 function openDownloadPreview(imageDataUrl) {
         if (!elements.downloadPreview || !elements.downloadPreviewImage) return;
-        elements.downloadPreviewImage.src = imageDataUrl;
+        if (imageDataUrl) {
+                elements.downloadPreviewImage.src = imageDataUrl;
+        }
         elements.downloadPreview.classList.add("show");
 }
 
 function closeDownloadPreview() {
         if (!elements.downloadPreview) return;
         elements.downloadPreview.classList.remove("show");
+}
+
+function setDownloadPreviewLoading(isLoading) {
+        if (!elements.downloadPreview) return;
+        elements.downloadPreview.classList.toggle("is-loading", Boolean(isLoading));
 }
 
 function updateStats() {
@@ -1307,6 +1586,18 @@ function restoreState() {
                         updateHistoryDisplay();
                 } catch (error) {
                         state.quoteHistory = [];
+                }
+        }
+
+        const savedUrduUsed = localStorage.getItem("baiza_urdu_used");
+        if (savedUrduUsed) {
+                try {
+                        const parsed = JSON.parse(savedUrduUsed);
+                        if (Array.isArray(parsed)) {
+                                state.urduUsedQuotes = new Set(parsed);
+                        }
+                } catch (error) {
+                        state.urduUsedQuotes = new Set();
                 }
         }
 

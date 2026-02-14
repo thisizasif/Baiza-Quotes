@@ -386,6 +386,10 @@
             content: "-- "
         }
 
+        .quote-author:empty {
+            display: none
+        }
+
         .quote-section.is-loading .quote-content {
             opacity: .32;
             transform: scale(.99)
@@ -416,13 +420,22 @@
 
         .quote-copyright {
             position: absolute;
-            right: 14px;
-            bottom: 10px;
-            font: 600 .68rem "Cormorant Garamond", Georgia, serif;
-            letter-spacing: .08em;
+            right: 18px;
+            bottom: 12px;
+            padding: 4px 10px;
+            border: 1px solid rgba(255, 255, 255, .22);
+            border-radius: 999px;
+            background: linear-gradient(120deg, rgba(8, 18, 30, .52), rgba(15, 35, 52, .42));
+            backdrop-filter: blur(6px);
+            font: italic 700 .84rem "Cormorant Garamond", Georgia, serif;
+            letter-spacing: .14em;
+            line-height: 1;
             text-transform: lowercase;
-            color: rgba(245, 252, 255, .82);
-            text-shadow: 0 1px 5px rgba(0, 0, 0, .45);
+            color: transparent;
+            background-image: linear-gradient(120deg, #fff9ee 18%, #ffe0a8 52%, #c9f7ff 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, .36);
             pointer-events: none;
             user-select: none;
             z-index: 3
@@ -720,6 +733,24 @@
             background: var(--panel);
             box-shadow: var(--s);
             overflow: hidden
+        }
+
+        .download-preview.is-loading .download-preview-card::after {
+            content: "Rendering preview...";
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            background: rgba(4, 12, 22, .56);
+            color: #f0f8ff;
+            font: 600 .95rem "Space Grotesk", "Segoe UI", sans-serif;
+            letter-spacing: .04em;
+            z-index: 3
+        }
+
+        .download-preview.is-loading #downloadPreviewImage {
+            opacity: .35;
+            filter: blur(1px)
         }
 
         #downloadPreviewImage {
