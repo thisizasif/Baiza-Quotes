@@ -273,9 +273,18 @@ const elements = {
 };
 
 function normalizeQuote(text, author, category = "general") {
+        const cleanText = String(text || "")
+                .trim()
+                .replace(/^[\s"'`“”‘’]+/, "")
+                .replace(/[\s"'`“”‘’]+$/, "");
+        const cleanAuthor = String(author || "Unknown")
+                .trim()
+                .replace(/^[\s"'`“”‘’]+/, "")
+                .replace(/[\s"'`“”‘’]+$/, "");
+
         return {
-                text: String(text || "").trim(),
-                author: String(author || "Unknown").trim(),
+                text: cleanText,
+                author: cleanAuthor,
                 category
         };
 }
