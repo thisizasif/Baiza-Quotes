@@ -11,7 +11,7 @@
         href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=20260214a">
+    <link rel="stylesheet" href="style.css?v=20260214b">
 </head>
 
 <body>
@@ -70,6 +70,7 @@
                     <button class="btn btn-secondary" id="shareBtn"><i class="fas fa-share-alt"></i>Share</button>
                     <button class="btn btn-success" id="downloadBtn"><i class="fas fa-download"></i>Download</button>
                 </div>
+                <div class="quote-copyright">thisizasif</div>
             </section>
             <aside class="sidebar">
                 <div class="stats-card">
@@ -89,9 +90,17 @@
             height="630"></canvas></div>
     <div class="swipe-indicator"><i class="fas fa-arrows-left-right"></i>Swipe for more quotes</div>
     <div class="toast info" id="toast"><i class="fas fa-circle-check"></i><span id="toastMessage">Ready.</span></div>
+    <div class="download-preview" id="downloadPreview">
+        <div class="download-preview-backdrop" id="downloadPreviewBackdrop"></div>
+        <div class="download-preview-card">
+            <button class="download-preview-close" id="downloadPreviewClose" aria-label="Close preview">&times;</button>
+            <img id="downloadPreviewImage" alt="Downloaded quote preview">
+        </div>
+    </div>
 
-    <script src="script.js?v=20260214a"></script>
+    <script src="script.js?v=20260214b"></script>
 </body>
 
 </html>
+
 

@@ -414,6 +414,20 @@
             gap: 10px
         }
 
+        .quote-copyright {
+            position: absolute;
+            right: 14px;
+            bottom: 10px;
+            font: 600 .68rem "Cormorant Garamond", Georgia, serif;
+            letter-spacing: .08em;
+            text-transform: lowercase;
+            color: rgba(245, 252, 255, .82);
+            text-shadow: 0 1px 5px rgba(0, 0, 0, .45);
+            pointer-events: none;
+            user-select: none;
+            z-index: 3
+        }
+
         .btn {
             border: 1px solid transparent;
             border-radius: var(--r2);
@@ -676,6 +690,59 @@
             font-size: .8rem;
             z-index: 90;
             box-shadow: var(--s-soft)
+        }
+
+        .download-preview {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 120
+        }
+
+        .download-preview.show {
+            display: flex
+        }
+
+        .download-preview-backdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(5, 12, 20, .82);
+            backdrop-filter: blur(8px)
+        }
+
+        .download-preview-card {
+            position: relative;
+            width: min(92vw, 900px);
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            background: var(--panel);
+            box-shadow: var(--s);
+            overflow: hidden
+        }
+
+        #downloadPreviewImage {
+            width: 100%;
+            display: block;
+            aspect-ratio: 1200/630;
+            object-fit: cover
+        }
+
+        .download-preview-close {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: rgba(9, 18, 32, .72);
+            color: #fff;
+            font-size: 1.2rem;
+            line-height: 1;
+            cursor: pointer;
+            z-index: 2
         }
 
         .particle {

@@ -4,6 +4,8 @@ const PREFERS_REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduc
 const ENABLE_KEYWORD_MATCHING = false;
 const BACKGROUND_RECENT_LIMIT = 12;
 const DYNAMIC_IMAGE_CANDIDATES_PER_PROVIDER = 5;
+const SHORT_QUOTE_TARGET_MIN_WORDS = 5;
+const SHORT_QUOTE_TARGET_MAX_WORDS = 18;
 let typefitCache = null;
 const QUOTE_SOURCE_WEIGHT = {
         Quotable: 22,
@@ -277,6 +279,10 @@ const elements = {
         quoteSection: document.querySelector(".quote-section"),
         activeCategoryBadge: document.getElementById("activeCategoryBadge"),
         quoteMeta: document.getElementById("quoteMeta"),
+        downloadPreview: document.getElementById("downloadPreview"),
+        downloadPreviewBackdrop: document.getElementById("downloadPreviewBackdrop"),
+        downloadPreviewClose: document.getElementById("downloadPreviewClose"),
+        downloadPreviewImage: document.getElementById("downloadPreviewImage"),
         toast: document.getElementById("toast"),
         toastMessage: document.getElementById("toastMessage"),
         viewedCount: document.getElementById("viewedCount"),
@@ -292,12 +298,12 @@ const elements = {
 function normalizeQuote(text, author, category = "general") {
         const cleanText = String(text || "")
                 .trim()
-                .replace(/^[\s"'`“”‘’]+/, "")
-                .replace(/[\s"'`“”‘’]+$/, "");
+                .replace(/^[\s"'`]+/, "")
+                .replace(/[\s"'`]+$/, "");
         const cleanAuthor = String(author || "Unknown")
                 .trim()
-                .replace(/^[\s"'`“”‘’]+/, "")
-                .replace(/[\s"'`“”‘’]+$/, "");
+                .replace(/^[\s"'`]+/, "")
+                .replace(/[\s"'`]+$/, "");
 
         return {
                 text: cleanText,
@@ -323,8 +329,10 @@ function scoreQuoteCandidate(quote) {
 
         let score = 0;
 
-        if (wordCount >= 10 && wordCount <= 34) score += 28;
-        else if (wordCount >= 7 && wordCount <= 46) score += 18;
+        // Strong preference for short, punchy quotes.
+        if (wordCount >= SHORT_QUOTE_TARGET_MIN_WORDS && wordCount <= SHORT_QUOTE_TARGET_MAX_WORDS) score += 42;
+        else if (wordCount >= 4 && wordCount <= 24) score += 22;
+        else if (wordCount > 30) score -= 22;
         else score -= 8;
 
         if (author && !/^unknown$/i.test(author)) score += 20;
@@ -359,6 +367,14 @@ function pickBestQuote(candidates) {
         const scored = candidates
                 .map((quote) => ({ quote, score: scoreQuoteCandidate(quote) }))
                 .sort((a, b) => b.score - a.score);
+
+        const shortPreferred = scored.filter(({ quote }) => {
+                const wc = String(quote.text || "").trim().split(/\s+/).filter(Boolean).length;
+                return wc >= SHORT_QUOTE_TARGET_MIN_WORDS && wc <= SHORT_QUOTE_TARGET_MAX_WORDS;
+        });
+        if (shortPreferred.length) {
+                return shortPreferred[0].quote;
+        }
 
         return scored[0]?.quote || null;
 }
@@ -983,6 +999,13 @@ async function renderQuoteCardToCanvas() {
         ctx.font = '600 34px "Space Grotesk", "Segoe UI", sans-serif';
         ctx.fillStyle = "#f3fbff";
         ctx.fillText(`-- ${state.currentQuote.author}`, canvas.width / 2, startY + blockHeight + 46);
+        ctx.font = '600 24px "Cormorant Garamond", Georgia, serif';
+        ctx.fillStyle = "rgba(245, 252, 255, 0.9)";
+        ctx.textAlign = "right";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillText("thisizasif", canvas.width - 36, canvas.height - 28);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
         ctx.shadowBlur = 0;
 
         return canvas;
@@ -1030,12 +1053,14 @@ async function downloadQuoteAsImage() {
 
         try {
                 const canvas = await renderQuoteCardToCanvas();
+                const dataUrl = canvas.toDataURL("image/png");
 
                 const link = document.createElement("a");
                 link.download = `baiza-quote-${Date.now()}.png`;
-                link.href = canvas.toDataURL("image/png");
+                link.href = dataUrl;
                 link.click();
 
+                openDownloadPreview(dataUrl);
                 showToast("Image downloaded", "success");
         } catch (error) {
                 showToast("Image creation failed", "error");
@@ -1163,6 +1188,17 @@ function showToast(message, type = "info") {
         showToast._timer = setTimeout(() => {
                 elements.toast.classList.remove("show");
         }, 2600);
+}
+
+function openDownloadPreview(imageDataUrl) {
+        if (!elements.downloadPreview || !elements.downloadPreviewImage) return;
+        elements.downloadPreviewImage.src = imageDataUrl;
+        elements.downloadPreview.classList.add("show");
+}
+
+function closeDownloadPreview() {
+        if (!elements.downloadPreview) return;
+        elements.downloadPreview.classList.remove("show");
 }
 
 function updateStats() {
@@ -1307,6 +1343,12 @@ function setupEventListeners() {
         elements.copyBtn.addEventListener("click", copyQuote);
         elements.shareBtn.addEventListener("click", shareQuote);
         elements.downloadBtn.addEventListener("click", downloadQuoteAsImage);
+        if (elements.downloadPreviewBackdrop) {
+                elements.downloadPreviewBackdrop.addEventListener("click", closeDownloadPreview);
+        }
+        if (elements.downloadPreviewClose) {
+                elements.downloadPreviewClose.addEventListener("click", closeDownloadPreview);
+        }
 
         let touchStartX = 0;
         let touchEndX = 0;
@@ -1341,6 +1383,11 @@ function setupEventListeners() {
                 if ((event.ctrlKey || event.metaKey) && event.code === "KeyD") {
                         event.preventDefault();
                         downloadQuoteAsImage();
+                        return;
+                }
+
+                if (event.code === "Escape") {
+                        closeDownloadPreview();
                 }
         });
 }
